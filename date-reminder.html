@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>She Deserves to Be Remembered</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0d0b;
+    --card: #1a1613;
+    --accent: #c9783a;
+    --accent2: #e8c49a;
+    --text: #f0ebe3;
+    --muted: #7a6e62;
+    --danger: #e05252;
+    --soon: #e8c94a;
+    --ok: #6ab87a;
+    --border: #2e2822;
+    --info: #5a9fd4;
+    --admin: #8b5cf6;
+  }
+
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem 4rem; }
+
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* ── Header ── */
+  header { text-align: center; margin-bottom: 3rem; }
+  header h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 400; color: var(--accent2); letter-spacing: -0.01em; }
+  header h1 em { font-style: italic; color: var(--accent); }
+  header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* ── Section title ── */
+  .section-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--accent2); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Alert banner ── */
+  #upcoming-banner { background: linear-gradient(135deg, #2a1a0e, #1f1208); border: 1px solid var(--accent); border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 2.5rem; display: none; }
+  #upcoming-banner h2 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--accent); margin-bottom: 1rem; }
+  .alert-item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid #2a1e14; font-size: 0.92rem; }
+  .alert-item:last-child { border-bottom: none; }
+  .alert-badge { background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 20px; white-space: nowrap; letter-spacing: 0.04em; text-transform: uppercase; }
+  .alert-badge.urgent { background: var(--danger); }
+  .alert-badge.soon { background: var(--soon); color: #000; }
+
+  /* ── Global holidays ── */
+  .global-dates { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem 2rem; margin-bottom: 2.5rem; }
+  .global-dates h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--accent2); margin-bottom: 1rem; }
+  .global-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .global-chip { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 0.3rem 0.9rem; font-size: 0.8rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+  .chip-days { font-size: 0.72rem; font-weight: 600; }
+  .chip-days.urgent { color: var(--danger); }
+  .chip-days.soon { color: var(--soon); }
+  .chip-days.ok { color: var(--ok); }
+
+  /* ── BUDDY SUBSCRIBE BOX ── */
+  .subscribe-box {
+    background: linear-gradient(135deg, #1a1e2a, #141820);
+    border: 1px solid #2a3448;
+    border-left: 3px solid var(--info);
+    border-radius: 14px;
+    padding: 1.75rem 2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .subscribe-box h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    color: var(--info);
+    margin-bottom: 0.4rem;
+  }
+
+  .subscribe-box .sub-desc {
+    font-size: 0.875rem;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    line-height: 1.6;
+  }
+
+  .sub-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .sub-form input[type=text],
+  .sub-form input[type=email] {
+    flex: 1;
+    min-width: 160px;
+    background: var(--bg);
+    border: 1px solid #2a3448;
+    border-radius: 8px;
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .sub-form input:focus { border-color: var(--info); }
+  .sub-form input::placeholder { color: var(--muted); }
+
+  .btn-subscribe {
+    background: var(--info);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-subscribe:hover { opacity: 0.85; }
+
+  .sub-status { margin-top: 0.75rem; font-size: 0.82rem; display: none; padding: 0.4rem 0; }
+  .sub-status.success { color: var(--ok); display: block; }
+  .sub-status.error   { color: var(--danger); display: block; }
+  .sub-status.already { color: var(--soon); display: block; }
+
+  .subscriber-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
+  .sub-chip {
+    background: #1a2535;
+    border: 1px solid #2a3a52;
+    border-radius: 20px;
+    padding: 0.2rem 0.75rem;
+    font-size: 0.78rem;
+    color: var(--info);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .sub-chip-name { font-weight: 500; }
+  .sub-chip-email { opacity: 0.6; font-size: 0.72rem; }
+
+  /* ── Person cards ── */
+  .person-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem; }
+  .person-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; position: relative; transition: border-color 0.2s; }
+  .person-card:hover { border-color: var(--accent); }
+  .person-card .name { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--accent2); margin-bottom: 0.25rem; }
+  .person-card .owner { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.25rem; letter-spacing: 0.03em; }
+  .date-list { list-style: none; }
+  .date-item { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.875rem; }
+  .date-item:last-child { border-bottom: none; }
+  .date-item .lbl { color: var(--text); flex: 1; }
+  .date-item .dval { color: var(--muted); font-size: 0.8rem; margin: 0 0.75rem; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.urgent { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  .status-dot.soon   { background: var(--soon);   box-shadow: 0 0 6px var(--soon); }
+  .status-dot.ok     { background: var(--ok); }
+  .days-left { font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
+  .days-left.urgent { color: var(--danger); }
+  .days-left.soon   { color: var(--soon); }
+  .days-left.ok     { color: var(--ok); }
+  .delete-person { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 0.25rem; transition: color 0.2s; }
+  .delete-person:hover { color: var(--danger); }
+
+  /* ── Add wife form ── */
+  .add-section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem 2rem; margin-bottom: 2.5rem; }
+  .add-section h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--accent2); margin-bottom: 1.5rem; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+  .field label { display: block; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .field input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.65rem 0.9rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+  .field input:focus { border-color: var(--accent); }
+  .field input::placeholder { color: var(--muted); }
+  .dates-group { margin-bottom: 1.25rem; }
+  .dates-group > label { display: block; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.75rem; }
+  .date-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+  .date-input-row { display: flex; align-items: center; gap: 0.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; }
+  .date-input-row span { font-size: 0.8rem; color: var(--muted); white-space: nowrap; min-width: 90px; }
+  .date-input-row input { background: none; border: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.875rem; padding: 0; outline: none; width: 100%; }
+  .custom-date-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+  .custom-date-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.5rem 0.75rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; outline: none; transition: border-color 0.2s; }
+  .custom-date-row input:focus { border-color: var(--accent); }
+  .btn-remove-custom { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0 0.25rem; transition: color 0.2s; }
+  .btn-remove-custom:hover { color: var(--danger); }
+  .btn-add-custom { background: none; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); padding: 0.5rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.25rem; }
+  .btn-add-custom:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-submit { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.75rem 2rem; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: background 0.2s; margin-top: 1rem; }
+  .btn-submit:hover { background: #b8662a; }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); font-style: italic; font-family: 'Playfair Display', serif; }
+
+  /* ── ADMIN SECTION ── */
+  .admin-divider {
+    margin: 4rem 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .admin-divider-line { flex: 1; height: 1px; background: repeating-linear-gradient(90deg, var(--admin) 0, var(--admin) 6px, transparent 6px, transparent 12px); opacity: 0.4; }
+
+  .admin-divider-label {
+    background: #1a1224;
+    border: 1px solid #3a2a5e;
+    color: var(--admin);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.35rem 1rem;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .admin-notice {
+    background: #1a1224;
+    border: 1px solid #3a2a5e;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.82rem;
+    color: #9a7ec8;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  .admin-notice strong { color: var(--admin); }
+
+  /* Admin email panel */
+  .admin-panel {
+    background: #110f1a;
+    border: 1px solid #2e2448;
+    border-top: 3px solid var(--admin);
+    border-radius: 14px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .admin-panel-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .admin-panel-header h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--admin); display: flex; align-items: center; gap: 0.6rem; }
+  .panel-toggle { font-size: 0.8rem; color: var(--muted); }
+  .panel-body { margin-top: 1.5rem; }
+  .panel-body.hidden { display: none; }
+
+  .email-setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+  @media (max-width: 580px) { .email-setup-grid { grid-template-columns: 1fr; } }
+
+  .ef label { display: block; font-size: 0.72rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.35rem; }
+  .ef input { width: 100%; background: var(--bg); border: 1px solid #2e2448; border-radius: 8px; color: var(--text); padding: 0.6rem 0.85rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; outline: none; transition: border-color 0.2s; }
+  .ef input:focus { border-color: var(--admin); }
+  .ef input::placeholder { color: var(--muted); }
+  .ef small { display: block; font-size: 0.7rem; color: var(--muted); margin-top: 0.3rem; }
+  .ef small a { color: #9a7ec8; }
+
+  .admin-subscriber-list { margin-bottom: 1.25rem; }
+  .admin-subscriber-list > label { display: block; font-size: 0.72rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.75rem; }
+  
+  .admin-sub-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .admin-sub-table th { text-align: left; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; padding: 0 0.5rem 0.5rem; border-bottom: 1px solid #2e2448; }
+  .admin-sub-table td { padding: 0.6rem 0.5rem; border-bottom: 1px solid #1e1a2e; vertical-align: middle; }
+  .admin-sub-table tr:last-child td { border-bottom: none; }
+  .admin-sub-table .email-col { color: var(--muted); font-size: 0.78rem; }
+  
+  .btn-remove-sub { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 4px; transition: all 0.2s; }
+  .btn-remove-sub:hover { color: var(--danger); background: #2e1a1a; }
+
+  .no-subs { color: var(--muted); font-style: italic; font-size: 0.82rem; padding: 0.75rem 0; }
+
+  .check-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; }
+  .check-row input[type=checkbox] { accent-color: var(--admin); width: 15px; height: 15px; cursor: pointer; }
+  .check-row label { cursor: pointer; }
+
+  .admin-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #2e2448; }
+
+  .btn-admin-save { background: var(--admin); color: #fff; border: none; border-radius: 8px; padding: 0.65rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+  .btn-admin-save:hover { opacity: 0.85; }
+  .btn-admin-outline { background: transparent; color: var(--admin); border: 1px solid var(--admin); border-radius: 8px; padding: 0.65rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .btn-admin-outline:hover { background: var(--admin); color: #fff; }
+  .btn-send-now { background: transparent; color: var(--ok); border: 1px solid var(--ok); border-radius: 8px; padding: 0.65rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .btn-send-now:hover { background: var(--ok); color: #000; }
+
+  .email-status { font-size: 0.82rem; padding: 0.4rem 0.9rem; border-radius: 6px; display: none; align-items: center; }
+  .email-status.success { background: #1a2e1f; color: var(--ok); display: flex; }
+  .email-status.error   { background: #2e1a1a; color: var(--danger); display: flex; }
+  .email-status.sending { background: #1a2535; color: var(--info); display: flex; }
+
+  .configured-badge { background: #1a2e1f; border: 1px solid var(--ok); color: var(--ok); font-size: 0.7rem; padding: 0.15rem 0.6rem; border-radius: 20px; font-family: 'DM Sans', sans-serif; }
+
+  .howto { background: #0d0b14; border: 1px solid #2e2448; border-radius: 10px; padding: 1rem 1.25rem; margin-top: 1.25rem; font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
+  .howto strong { color: #9a7ec8; }
+  .howto ol { margin-left: 1.25rem; margin-top: 0.4rem; }
+  .howto a { color: #9a7ec8; }
+  .howto code { color: var(--accent2); font-size: 0.78rem; background: #1a1628; padding: 0.1rem 0.4rem; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ═══ HEADER ═══ -->
+  <header>
+    <h1>She Deserves to Be <em>Remembered</em></h1>
+    <p>Never forget what matters · 7-day advance alerts · Email reminders</p>
+  </header>
+
+  <!-- ═══ ALERT BANNER ═══ -->
+  <div id="upcoming-banner">
+    <h2>⚠ Coming Up Soon</h2>
+    <div id="upcoming-list"></div>
+  </div>
+
+  <!-- ═══ UNIVERSAL HOLIDAYS ═══ -->
+  <div class="global-dates">
+    <h3>🌍 Universal Dates — for every wife</h3>
+    <div class="global-list" id="global-chips"></div>
+  </div>
+
+  <!-- ═══ BUDDY SUBSCRIBE BOX ═══ -->
+  <div class="subscribe-box">
+    <h3>📬 Get Email Reminders</h3>
+    <p class="sub-desc">Enter your name and email and we'll send you a heads-up <strong>7 days before</strong> any special date — so you actually have time to do something about it.</p>
+    <div class="sub-form">
+      <input type="text"  id="sub-name"  placeholder="Your name (e.g. Marco)">
+      <input type="email" id="sub-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter') subscribe()">
+      <button class="btn-subscribe" onclick="subscribe()">Subscribe ✓</button>
+    </div>
+    <div class="sub-status" id="sub-status"></div>
+    <div class="subscriber-chips" id="subscriber-chips"></div>
+  </div>
+
+  <!-- ═══ THE WIVES ═══ -->
+  <div class="section-title">The Wives</div>
+  <div class="person-grid" id="person-grid">
+    <div class="empty-state">Add the first wife below ↓</div>
+  </div>
+
+  <!-- ═══ ADD WIFE FORM ═══ -->
+  <div class="add-section">
+    <h3>+ Add a Wife</h3>
+    <div class="form-row">
+      <div class="field">
+        <label>Her Name</label>
+        <input type="text" id="wife-name" placeholder="e.g. Laura">
+      </div>
+      <div class="field">
+        <label>Added by (your name)</label>
+        <input type="text" id="owner-name" placeholder="e.g. Quinn">
+      </div>
+    </div>
+    <div class="dates-group">
+      <label>Standard Dates</label>
+      <div class="date-inputs">
+        <div class="date-input-row"><span>🎂 Birthday</span><input type="date" id="d-birthday"></div>
+        <div class="date-input-row"><span>💍 Anniversary</span><input type="date" id="d-anniversary"></div>
+      </div>
+    </div>
+    <div class="dates-group">
+      <label>Custom Dates</label>
+      <div id="custom-date-area"></div>
+      <button class="btn-add-custom" onclick="addCustomDateField()">+ Add Custom Date</button>
+    </div>
+    <button class="btn-submit" onclick="addPerson()">Save Her Dates</button>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       ADMIN SECTION — Quinn only. Friends, stop scrolling.
+  ════════════════════════════════════════════════════════════ -->
+
+  <div class="admin-divider">
+    <div class="admin-divider-line"></div>
+    <div class="admin-divider-label">⚙ Admin Only — Stop Here, Guys</div>
+    <div class="admin-divider-line"></div>
+  </div>
+
+  <div class="admin-notice">
+    <strong>Hey friends</strong> — nothing to see here. This section is for whoever set up this page.<br>
+    You've already done your part by subscribing above. 👆
+  </div>
+
+  <!-- Admin: Email engine config -->
+  <div class="admin-panel">
+    <div class="admin-panel-header" onclick="toggleAdmin()">
+      <h3>
+        🔧 Email Engine Setup
+        <span id="configured-badge" class="configured-badge" style="display:none">✓ Configured</span>
+      </h3>
+      <span class="panel-toggle" id="admin-arrow">▼</span>
+    </div>
+    <div class="panel-body hidden" id="admin-body">
+
+      <div class="email-setup-grid">
+        <div class="ef">
+          <label>EmailJS Service ID</label>
+          <input type="text" id="ej-service" placeholder="service_xxxxxxx">
+          <small>From <a href="https://www.emailjs.com" target="_blank">emailjs.com</a> → Email Services</small>
+        </div>
+        <div class="ef">
+          <label>EmailJS Template ID</label>
+          <input type="text" id="ej-template" placeholder="template_xxxxxxx">
+          <small>EmailJS → Email Templates</small>
+        </div>
+        <div class="ef">
+          <label>EmailJS Public Key</label>
+          <input type="text" id="ej-pubkey" placeholder="your_public_key">
+          <small>EmailJS → Account → API Keys</small>
+        </div>
+        <div class="ef">
+          <label>From Name (sender label)</label>
+          <input type="text" id="ej-sender" placeholder="e.g. The Crew Bot">
+        </div>
+      </div>
+
+      <!-- Subscriber management table -->
+      <div class="admin-subscriber-list">
+        <label>📋 Current Subscribers (signed up via box above)</label>
+        <div id="admin-sub-table-wrap">
+          <div class="no-subs">No subscribers yet.</div>
+        </div>
+      </div>
+
+      <div class="check-row">
+        <input type="checkbox" id="auto-send">
+        <label for="auto-send">Auto-send reminder emails when page opens (max once per day, only if dates ≤7 days)</label>
+      </div>
+
+      <div class="admin-actions">
+        <button class="btn-admin-save" onclick="saveAdminConfig()">💾 Save Settings</button>
+        <button class="btn-admin-outline" onclick="sendTestEmail()">✉ Send Test Email</button>
+        <button class="btn-send-now" onclick="sendNowEmail()">📨 Send Alerts Now</button>
+        <div class="email-status" id="email-status"></div>
+      </div>
+
+      <div class="howto">
+        <strong>Setup guide — free, ~2 min:</strong>
+        <ol>
+          <li>Go to <a href="https://www.emailjs.com" target="_blank">emailjs.com</a> and sign up free</li>
+          <li>Add an Email Service (Gmail recommended) → copy the <strong>Service ID</strong></li>
+          <li>Create an Email Template. Use these variables in the body:<br>
+            <code>{{event_list}}</code> — upcoming dates<br>
+            <code>{{to_email}}</code> — recipient's email<br>
+            <code>{{from_name}}</code> — sender name
+          </li>
+          <li>Copy your <strong>Template ID</strong> and <strong>Public Key</strong> (Account → API Keys)</li>
+          <li>Paste above, then Save. Free plan = 200 emails/month.</li>
+        </ol>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// HOLIDAYS
+// ═══════════════════════════════════════════════════════════════
+const GLOBAL_DATES = [
+  { name: "Valentine's Day",           month: 2,  day: 14 },
+  { name: "International Women's Day", month: 3,  day: 8  },
+  { name: "Mother's Day",              month: 5,  day: 11 },
+  { name: "Vietnamese Women's Day",    month: 10, day: 20 },
+  { name: "Christmas",                 month: 12, day: 25 },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let people      = JSON.parse(localStorage.getItem('wifeDates')      || '[]');
+let subscribers = JSON.parse(localStorage.getItem('wifeSubscribers') || '[]');
+let emailCfg    = JSON.parse(localStorage.getItem('wifeEmailCfg')   || '{}');
+let customCount = 0;
+
+// ═══════════════════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════════════════
+function tod() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+
+function nextFixed(month, day) {
+  const t = tod();
+  let d = new Date(t.getFullYear(), month - 1, day);
+  if (d < t) d = new Date(t.getFullYear() + 1, month - 1, day);
+  return d;
+}
+
+function daysUntilFixed(month, day) {
+  return Math.round((nextFixed(month, day) - tod()) / 86400000);
+}
+
+function daysUntil(dateStr) {
+  const t = tod();
+  const [y,m,d] = dateStr.split('-').map(Number);
+  let dt = new Date(y, m - 1, d);
+  if (dt < t) dt = new Date(y + 1, m - 1, d);
+  return Math.round((dt - t) / 86400000);
+}
+
+function sc(days) { return days <= 3 ? 'urgent' : days <= 7 ? 'soon' : 'ok'; }
+
+function fmtDate(dateStr) {
+  const [,m,d] = dateStr.split('-');
+  return new Date(2000, m-1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SUBSCRIBE (buddy-facing)
+// ═══════════════════════════════════════════════════════════════
+function subscribe() {
+  const name  = document.getElementById('sub-name').value.trim();
+  const email = document.getElementById('sub-email').value.trim();
+  const status = document.getElementById('sub-status');
+
+  if (!name) { showSubStatus('What\'s your name?', 'error'); return; }
+  if (!email || !email.includes('@')) { showSubStatus('Enter a valid email address', 'error'); return; }
+
+  if (subscribers.find(s => s.email.toLowerCase() === email.toLowerCase())) {
+    showSubStatus(`${email} is already subscribed ✓`, 'already');
+    return;
+  }
+
+  subscribers.push({ name, email });
+  localStorage.setItem('wifeSubscribers', JSON.stringify(subscribers));
+
+  document.getElementById('sub-name').value  = '';
+  document.getElementById('sub-email').value = '';
+
+  showSubStatus(`You're in, ${name}! We'll remind you before special dates 🎉`, 'success');
+  renderSubscriberChips();
+  renderAdminSubTable();
+}
+
+function showSubStatus(msg, type) {
+  const el = document.getElementById('sub-status');
+  el.className = 'sub-status ' + type;
+  el.textContent = msg;
+  setTimeout(() => { el.className = 'sub-status'; }, 5000);
+}
+
+function renderSubscriberChips() {
+  const el = document.getElementById('subscriber-chips');
+  el.innerHTML = '';
+  subscribers.forEach(s => {
+    const chip = document.createElement('div');
+    chip.className = 'sub-chip';
+    chip.innerHTML = `<span class="sub-chip-name">${s.name}</span><span class="sub-chip-email">${s.email}</span>`;
+    el.appendChild(chip);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN — config save/load
+// ═══════════════════════════════════════════════════════════════
+function saveAdminConfig() {
+  emailCfg.serviceId  = document.getElementById('ej-service').value.trim();
+  emailCfg.templateId = document.getElementById('ej-template').value.trim();
+  emailCfg.pubKey     = document.getElementById('ej-pubkey').value.trim();
+  emailCfg.sender     = document.getElementById('ej-sender').value.trim();
+  emailCfg.autoSend   = document.getElementById('auto-send').checked;
+  localStorage.setItem('wifeEmailCfg', JSON.stringify(emailCfg));
+  updateBadge();
+  showEmailStatus('Settings saved ✓', 'success');
+}
+
+function loadAdminConfig() {
+  if (emailCfg.serviceId)  document.getElementById('ej-service').value  = emailCfg.serviceId;
+  if (emailCfg.templateId) document.getElementById('ej-template').value = emailCfg.templateId;
+  if (emailCfg.pubKey)     document.getElementById('ej-pubkey').value   = emailCfg.pubKey;
+  if (emailCfg.sender)     document.getElementById('ej-sender').value   = emailCfg.sender;
+  document.getElementById('auto-send').checked = !!emailCfg.autoSend;
+  updateBadge();
+}
+
+function updateBadge() {
+  const ok = emailCfg.serviceId && emailCfg.templateId && emailCfg.pubKey;
+  document.getElementById('configured-badge').style.display = ok ? 'inline-block' : 'none';
+}
+
+function toggleAdmin() {
+  const body  = document.getElementById('admin-body');
+  const arrow = document.getElementById('admin-arrow');
+  body.classList.toggle('hidden');
+  arrow.textContent = body.classList.contains('hidden') ? '▶' : '▼';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN — subscriber table
+// ═══════════════════════════════════════════════════════════════
+function renderAdminSubTable() {
+  const wrap = document.getElementById('admin-sub-table-wrap');
+  if (!subscribers.length) {
+    wrap.innerHTML = '<div class="no-subs">No subscribers yet — share the page with your crew.</div>';
+    return;
+  }
+  const rows = subscribers.map((s, i) => `
+    <tr>
+      <td>${s.name}</td>
+      <td class="email-col">${s.email}</td>
+      <td><button class="btn-remove-sub" onclick="removeSub(${i})">Remove</button></td>
+    </tr>`).join('');
+  wrap.innerHTML = `
+    <table class="admin-sub-table">
+      <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function removeSub(i) {
+  if (!confirm(`Remove ${subscribers[i].name}?`)) return;
+  subscribers.splice(i, 1);
+  localStorage.setItem('wifeSubscribers', JSON.stringify(subscribers));
+  renderSubscriberChips();
+  renderAdminSubTable();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EMAIL SENDING
+// ═══════════════════════════════════════════════════════════════
+function buildAlerts(maxDays = 7) {
+  const alerts = [];
+  GLOBAL_DATES.forEach(g => {
+    const d = daysUntilFixed(g.month, g.day);
+    if (d <= maxDays) alerts.push({ label: g.name, days: d });
+  });
+  people.forEach(p => {
+    const all = [];
+    if (p.birthday)    all.push({ label: `🎂 ${p.name}'s Birthday`, val: p.birthday });
+    if (p.anniversary) all.push({ label: `💍 ${p.name}'s Anniversary`, val: p.anniversary });
+    (p.custom||[]).forEach(c => all.push({ label: `📅 ${c.label} (${p.name})`, val: c.date }));
+    all.forEach(dt => {
+      const d = daysUntil(dt.val);
+      if (d <= maxDays) alerts.push({ label: dt.label, days: d });
+    });
+  });
+  return alerts.sort((a,b) => a.days - b.days);
+}
+
+function formatAlertText(alerts) {
+  if (!alerts.length) return 'No upcoming dates in the next 7 days.';
+  return alerts.map(a => {
+    const w = a.days === 0 ? '🔴 TODAY' : a.days <= 3 ? `🔴 In ${a.days} day(s)` : `🟡 In ${a.days} days`;
+    return `${w} — ${a.label}`;
+  }).join('\n');
+}
+
+function showEmailStatus(msg, type) {
+  const el = document.getElementById('email-status');
+  el.className = `email-status ${type}`;
+  el.textContent = msg;
+  if (type !== 'sending') setTimeout(() => { el.className = 'email-status'; }, 5000);
+}
+
+async function sendEmails(alerts) {
+  if (!emailCfg.serviceId || !emailCfg.templateId || !emailCfg.pubKey) {
+    showEmailStatus('Complete EmailJS setup first', 'error'); return;
+  }
+  if (!subscribers.length) {
+    showEmailStatus('No subscribers yet', 'error'); return;
+  }
+  emailjs.init(emailCfg.pubKey);
+  const text = formatAlertText(alerts);
+  showEmailStatus('Sending...', 'sending');
+  let ok = 0, fail = 0;
+  for (const sub of subscribers) {
+    try {
+      await emailjs.send(emailCfg.serviceId, emailCfg.templateId, {
+        to_email:   sub.email,
+        from_name:  emailCfg.sender || 'Date Reminder',
+        event_list: text,
+      });
+      ok++;
+    } catch(e) { console.error(e); fail++; }
+  }
+  if (fail === 0) showEmailStatus(`✓ Sent to ${ok} subscriber(s)`, 'success');
+  else showEmailStatus(`Sent ${ok}, failed ${fail}`, fail === subscribers.length ? 'error' : 'success');
+}
+
+function sendTestEmail() {
+  sendEmails([
+    { label: "Valentine's Day", days: 6 },
+    { label: "Laura's Birthday", days: 2 },
+  ]);
+}
+
+function sendNowEmail() { sendEmails(buildAlerts(7)); }
+
+function checkAutoSend() {
+  if (!emailCfg.autoSend) return;
+  const alerts = buildAlerts(7);
+  if (!alerts.length) return;
+  const todayStr = new Date().toDateString();
+  if (localStorage.getItem('lastEmailDate') === todayStr) return;
+  localStorage.setItem('lastEmailDate', todayStr);
+  sendEmails(alerts);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+function renderGlobal() {
+  const el = document.getElementById('global-chips');
+  el.innerHTML = '';
+  GLOBAL_DATES.forEach(g => {
+    const days = daysUntilFixed(g.month, g.day);
+    const s = sc(days);
+    el.innerHTML += `<div class="global-chip">${g.name} <span class="chip-days ${s}">${days === 0 ? 'TODAY' : days + 'd'}</span></div>`;
+  });
+}
+
+function renderPeople() {
+  const grid = document.getElementById('person-grid');
+  grid.innerHTML = '';
+  if (!people.length) { grid.innerHTML = '<div class="empty-state">Add the first wife below ↓</div>'; return; }
+  people.forEach((p, pi) => {
+    const all = [];
+    if (p.birthday)    all.push({ label: '🎂 Birthday', val: p.birthday });
+    if (p.anniversary) all.push({ label: '💍 Anniversary', val: p.anniversary });
+    (p.custom||[]).forEach(c => all.push({ label: '📅 ' + c.label, val: c.date }));
+    const items = all.map(dt => {
+      const days = daysUntil(dt.val);
+      const s = sc(days);
+      const disp = days === 0 ? 'Today! 🎉' : days + ' days';
+      return `<li class="date-item">
+        <span class="status-dot ${s}"></span>
+        <span class="lbl">${dt.label}</span>
+        <span class="dval">${fmtDate(dt.val)}</span>
+        <span class="days-left ${s}">${disp}</span>
+      </li>`;
+    }).join('');
+    grid.innerHTML += `
+      <div class="person-card">
+        <button class="delete-person" onclick="removePerson(${pi})">✕</button>
+        <div class="name">${p.name}</div>
+        <div class="owner">Added by ${p.owner}</div>
+        <ul class="date-list">${items || '<li class="date-item"><span class="lbl" style="color:var(--muted)">No dates added yet</span></li>'}</ul>
+      </div>`;
+  });
+}
+
+function renderAlerts() {
+  const alerts = buildAlerts(7);
+  const banner = document.getElementById('upcoming-banner');
+  const list   = document.getElementById('upcoming-list');
+  if (!alerts.length) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  list.innerHTML = alerts.map(a => {
+    const s = sc(a.days);
+    const badge = a.days === 0 ? 'TODAY' : a.days <= 3 ? `${a.days}d — Urgent` : `${a.days}d away`;
+    return `<div class="alert-item"><span class="alert-badge ${s}">${badge}</span><span>${a.label}</span></div>`;
+  }).join('');
+}
+
+function render() { renderGlobal(); renderPeople(); renderAlerts(); }
+
+// ═══════════════════════════════════════════════════════════════
+// ADD WIFE
+// ═══════════════════════════════════════════════════════════════
+function addCustomDateField() {
+  const area = document.getElementById('custom-date-area');
+  const id = customCount++;
+  const row = document.createElement('div');
+  row.className = 'custom-date-row';
+  row.id = 'cr-' + id;
+  row.innerHTML = `
+    <input type="text" placeholder="Label (e.g. First Date)" id="cl-${id}">
+    <input type="date" id="cd-${id}">
+    <button class="btn-remove-custom" onclick="document.getElementById('cr-${id}').remove()">✕</button>`;
+  area.appendChild(row);
+}
+
+function addPerson() {
+  const name  = document.getElementById('wife-name').value.trim();
+  const owner = document.getElementById('owner-name').value.trim();
+  if (!name || !owner) { alert('Enter both names.'); return; }
+  const birthday    = document.getElementById('d-birthday').value;
+  const anniversary = document.getElementById('d-anniversary').value;
+  const custom = [];
+  document.querySelectorAll('.custom-date-row').forEach(row => {
+    const id = row.id.replace('cr-', '');
+    const label = document.getElementById('cl-'+id)?.value.trim();
+    const date  = document.getElementById('cd-'+id)?.value;
+    if (label && date) custom.push({ label, date });
+  });
+  people.push({ name, owner, birthday, anniversary, custom });
+  localStorage.setItem('wifeDates', JSON.stringify(people));
+  render();
+  document.getElementById('wife-name').value = '';
+  document.getElementById('owner-name').value = '';
+  document.getElementById('d-birthday').value = '';
+  document.getElementById('d-anniversary').value = '';
+  document.getElementById('custom-date-area').innerHTML = '';
+}
+
+function removePerson(i) {
+  if (!confirm('Remove ' + people[i].name + '?')) return;
+  people.splice(i, 1);
+  localStorage.setItem('wifeDates', JSON.stringify(people));
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+loadAdminConfig();
+renderSubscriberChips();
+renderAdminSubTable();
+render();
+checkAutoSend();
+</script>
+</body>
+</html>
