@@ -6,6 +6,29 @@
 <title>She Deserves to Be Remembered</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+import { getFirestore, collection, doc, addDoc, deleteDoc, setDoc, getDoc, getDocs, onSnapshot }
+  from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+
+// ── Firebase config (paste YOUR config from Firebase Console) ──
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+window._db = db;
+window._fb = { collection, doc, addDoc, deleteDoc, setDoc, getDoc, getDocs, onSnapshot };
+window._fbReady = true;
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -465,12 +488,73 @@ const GLOBAL_DATES = [
 ];
 
 // ═══════════════════════════════════════════════════════════════
-// STATE
+// STATE (populated from Firestore via real-time listeners)
 // ═══════════════════════════════════════════════════════════════
-let people      = JSON.parse(localStorage.getItem('wifeDates')      || '[]');
-let subscribers = JSON.parse(localStorage.getItem('wifeSubscribers') || '[]');
-let emailCfg    = JSON.parse(localStorage.getItem('wifeEmailCfg')   || '{}');
+let people      = [];
+let subscribers = [];
+let emailCfg    = {};
 let customCount = 0;
+let peopleIds     = [];  // parallel array: Firestore doc IDs for people[]
+let subscriberIds = [];  // parallel array: Firestore doc IDs for subscribers[]
+
+// ═══════════════════════════════════════════════════════════════
+// FIRESTORE REAL-TIME LISTENERS
+// ═══════════════════════════════════════════════════════════════
+function initFirestore() {
+  const db = window._db;
+  const { collection, doc, onSnapshot } = window._fb;
+  let wivesLoaded = false, subsLoaded = false, cfgLoaded = false;
+
+  function tryAutoSend() {
+    if (wivesLoaded && subsLoaded && cfgLoaded) checkAutoSend();
+  }
+
+  onSnapshot(collection(db, 'wives'), (snapshot) => {
+    people = [];
+    peopleIds = [];
+    snapshot.forEach((d) => { people.push(d.data()); peopleIds.push(d.id); });
+    render();
+    if (!wivesLoaded) { wivesLoaded = true; tryAutoSend(); }
+  });
+
+  onSnapshot(collection(db, 'subscribers'), (snapshot) => {
+    subscribers = [];
+    subscriberIds = [];
+    snapshot.forEach((d) => { subscribers.push(d.data()); subscriberIds.push(d.id); });
+    renderSubscriberChips();
+    renderAdminSubTable();
+    if (!subsLoaded) { subsLoaded = true; tryAutoSend(); }
+  });
+
+  onSnapshot(doc(db, 'config', 'emailConfig'), (snapshot) => {
+    emailCfg = snapshot.exists() ? snapshot.data() : {};
+    loadAdminConfig();
+    if (!cfgLoaded) { cfgLoaded = true; tryAutoSend(); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ONE-TIME MIGRATION: localStorage → Firestore
+// ═══════════════════════════════════════════════════════════════
+async function migrateFromLocalStorage() {
+  if (localStorage.getItem('firestoreMigrated')) return;
+  const { collection, doc, addDoc, setDoc } = window._fb;
+  const db = window._db;
+  const oldPeople = JSON.parse(localStorage.getItem('wifeDates') || '[]');
+  const oldSubs   = JSON.parse(localStorage.getItem('wifeSubscribers') || '[]');
+  const oldCfg    = JSON.parse(localStorage.getItem('wifeEmailCfg') || '{}');
+  if (!oldPeople.length && !oldSubs.length && !Object.keys(oldCfg).length) {
+    localStorage.setItem('firestoreMigrated', 'true');
+    return;
+  }
+  try {
+    for (const p of oldPeople) await addDoc(collection(db, 'wives'), p);
+    for (const s of oldSubs) await addDoc(collection(db, 'subscribers'), s);
+    if (Object.keys(oldCfg).length) await setDoc(doc(db, 'config', 'emailConfig'), oldCfg);
+    localStorage.setItem('firestoreMigrated', 'true');
+    console.log('Migration complete: localStorage → Firestore');
+  } catch (e) { console.error('Migration failed:', e); }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // DATE HELPERS
@@ -506,10 +590,9 @@ function fmtDate(dateStr) {
 // ═══════════════════════════════════════════════════════════════
 // SUBSCRIBE (buddy-facing)
 // ═══════════════════════════════════════════════════════════════
-function subscribe() {
+async function subscribe() {
   const name  = document.getElementById('sub-name').value.trim();
   const email = document.getElementById('sub-email').value.trim();
-  const status = document.getElementById('sub-status');
 
   if (!name) { showSubStatus('What\'s your name?', 'error'); return; }
   if (!email || !email.includes('@')) { showSubStatus('Enter a valid email address', 'error'); return; }
@@ -519,15 +602,16 @@ function subscribe() {
     return;
   }
 
-  subscribers.push({ name, email });
-  localStorage.setItem('wifeSubscribers', JSON.stringify(subscribers));
-
-  document.getElementById('sub-name').value  = '';
-  document.getElementById('sub-email').value = '';
-
-  showSubStatus(`You're in, ${name}! We'll remind you before special dates 🎉`, 'success');
-  renderSubscriberChips();
-  renderAdminSubTable();
+  try {
+    const { collection, addDoc } = window._fb;
+    await addDoc(collection(window._db, 'subscribers'), { name, email });
+    document.getElementById('sub-name').value  = '';
+    document.getElementById('sub-email').value = '';
+    showSubStatus(`You're in, ${name}! We'll remind you before special dates 🎉`, 'success');
+  } catch (e) {
+    console.error('Subscribe error:', e);
+    showSubStatus('Something went wrong, try again.', 'error');
+  }
 }
 
 function showSubStatus(msg, type) {
@@ -551,15 +635,21 @@ function renderSubscriberChips() {
 // ═══════════════════════════════════════════════════════════════
 // ADMIN — config save/load
 // ═══════════════════════════════════════════════════════════════
-function saveAdminConfig() {
+async function saveAdminConfig() {
   emailCfg.serviceId  = document.getElementById('ej-service').value.trim();
   emailCfg.templateId = document.getElementById('ej-template').value.trim();
   emailCfg.pubKey     = document.getElementById('ej-pubkey').value.trim();
   emailCfg.sender     = document.getElementById('ej-sender').value.trim();
   emailCfg.autoSend   = document.getElementById('auto-send').checked;
-  localStorage.setItem('wifeEmailCfg', JSON.stringify(emailCfg));
-  updateBadge();
-  showEmailStatus('Settings saved ✓', 'success');
+  try {
+    const { doc, setDoc } = window._fb;
+    await setDoc(doc(window._db, 'config', 'emailConfig'), emailCfg);
+    updateBadge();
+    showEmailStatus('Settings saved ✓', 'success');
+  } catch (e) {
+    console.error('Save config error:', e);
+    showEmailStatus('Failed to save settings', 'error');
+  }
 }
 
 function loadAdminConfig() {
@@ -605,12 +695,15 @@ function renderAdminSubTable() {
     </table>`;
 }
 
-function removeSub(i) {
+async function removeSub(i) {
   if (!confirm(`Remove ${subscribers[i].name}?`)) return;
-  subscribers.splice(i, 1);
-  localStorage.setItem('wifeSubscribers', JSON.stringify(subscribers));
-  renderSubscriberChips();
-  renderAdminSubTable();
+  try {
+    const { doc, deleteDoc } = window._fb;
+    await deleteDoc(doc(window._db, 'subscribers', subscriberIds[i]));
+  } catch (e) {
+    console.error('Remove subscriber error:', e);
+    alert('Failed to remove subscriber.');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -768,7 +861,7 @@ function addCustomDateField() {
   area.appendChild(row);
 }
 
-function addPerson() {
+async function addPerson() {
   const name  = document.getElementById('wife-name').value.trim();
   const owner = document.getElementById('owner-name').value.trim();
   if (!name || !owner) { alert('Enter both names.'); return; }
@@ -781,31 +874,41 @@ function addPerson() {
     const date  = document.getElementById('cd-'+id)?.value;
     if (label && date) custom.push({ label, date });
   });
-  people.push({ name, owner, birthday, anniversary, custom });
-  localStorage.setItem('wifeDates', JSON.stringify(people));
-  render();
-  document.getElementById('wife-name').value = '';
-  document.getElementById('owner-name').value = '';
-  document.getElementById('d-birthday').value = '';
-  document.getElementById('d-anniversary').value = '';
-  document.getElementById('custom-date-area').innerHTML = '';
+  try {
+    const { collection, addDoc } = window._fb;
+    await addDoc(collection(window._db, 'wives'), { name, owner, birthday, anniversary, custom });
+    document.getElementById('wife-name').value = '';
+    document.getElementById('owner-name').value = '';
+    document.getElementById('d-birthday').value = '';
+    document.getElementById('d-anniversary').value = '';
+    document.getElementById('custom-date-area').innerHTML = '';
+  } catch (e) {
+    console.error('Add person error:', e);
+    alert('Failed to save. Try again.');
+  }
 }
 
-function removePerson(i) {
+async function removePerson(i) {
   if (!confirm('Remove ' + people[i].name + '?')) return;
-  people.splice(i, 1);
-  localStorage.setItem('wifeDates', JSON.stringify(people));
-  render();
+  try {
+    const { doc, deleteDoc } = window._fb;
+    await deleteDoc(doc(window._db, 'wives', peopleIds[i]));
+  } catch (e) {
+    console.error('Remove person error:', e);
+    alert('Failed to remove. Try again.');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
-loadAdminConfig();
-renderSubscriberChips();
-renderAdminSubTable();
-render();
-checkAutoSend();
+render(); // initial empty render
+
+function startFirestore() {
+  migrateFromLocalStorage().then(() => initFirestore());
+}
+if (window._fbReady) startFirestore();
+else window.addEventListener('firebase-ready', startFirestore);
 </script>
 </body>
 </html>
