@@ -44,16 +44,20 @@ function daysUntil(dateStr) {
   return Math.round((dt - t) / 86400000);
 }
 
-// ── Build alerts ──
-function buildAlerts(people, maxDays = 7) {
+// ── Build alerts for a specific subscriber ──
+function buildAlertsForSubscriber(people, subscriberEmail, maxDays = 7) {
   const alerts = [];
 
+  // Global holidays go to everyone
   for (const g of GLOBAL_DATES) {
     const d = daysUntilFixed(g.month, g.day);
     if (d <= maxDays) alerts.push({ label: g.name, days: d });
   }
 
+  // Wife-specific dates only go to the husband who added her
   for (const p of people) {
+    if (p.ownerEmail && p.ownerEmail.toLowerCase() !== subscriberEmail.toLowerCase()) continue;
+    // If ownerEmail is not set (legacy data), include for everyone
     const all = [];
     if (p.birthday)    all.push({ label: `${p.name}'s Birthday`, val: p.birthday });
     if (p.anniversary) all.push({ label: `${p.name}'s Anniversary`, val: p.anniversary });
@@ -123,18 +127,6 @@ async function main() {
   wivesSnap.forEach(doc => people.push(doc.data()));
   console.log(`  Found ${people.length} wives in Firestore`);
 
-  // Build alerts
-  const alerts = buildAlerts(people, 7);
-  console.log(`  Found ${alerts.length} upcoming date alert(s)`);
-
-  if (alerts.length === 0) {
-    console.log('  No dates within 7 days. Done.');
-    return;
-  }
-
-  const alertText = formatAlertText(alerts);
-  console.log('  Alerts:\n' + alertText.split('\n').map(l => '    ' + l).join('\n'));
-
   // Read subscribers
   const subsSnap = await db.collection('subscribers').get();
   const subscribers = [];
@@ -146,9 +138,18 @@ async function main() {
     return;
   }
 
-  // Send emails
-  let ok = 0, fail = 0;
+  // Send per-subscriber targeted emails
+  let ok = 0, fail = 0, skipped = 0;
   for (const sub of subscribers) {
+    const alerts = buildAlertsForSubscriber(people, sub.email, 7);
+    if (alerts.length === 0) {
+      console.log(`  ${sub.name}: no upcoming dates, skipping`);
+      skipped++;
+      continue;
+    }
+    const alertText = formatAlertText(alerts);
+    console.log(`  ${sub.name}: ${alerts.length} alert(s)`);
+    alertText.split('\n').forEach(l => console.log(`    ${l}`));
     try {
       await sendEmailViaREST(sub.email, alertText, cfg);
       console.log(`  Sent to ${sub.name} (${sub.email})`);
@@ -160,7 +161,7 @@ async function main() {
     }
   }
 
-  console.log(`\n  Done. Sent: ${ok}, Failed: ${fail}`);
+  console.log(`\n  Done. Sent: ${ok}, Skipped: ${skipped}, Failed: ${fail}`);
   if (fail > 0) process.exit(1);
 }
 
