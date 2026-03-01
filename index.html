@@ -201,8 +201,14 @@ window.dispatchEvent(new Event('firebase-ready'));
   .date-input-row { display: flex; align-items: center; gap: 0.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; }
   .date-input-row span { font-size: 0.8rem; color: var(--muted); white-space: nowrap; min-width: 90px; }
   .date-input-row input { background: none; border: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.875rem; padding: 0; outline: none; width: 100%; }
+  .month-select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; padding: 0.35rem 0.5rem; outline: none; flex: 1; min-width: 0; }
+  .month-select:focus { border-color: var(--accent); }
+  .day-input { background: var(--bg) !important; border: 1px solid var(--border) !important; border-radius: 6px !important; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; padding: 0.35rem 0.5rem !important; outline: none; width: 52px !important; flex: none !important; text-align: center; -moz-appearance: textfield; }
+  .day-input::-webkit-outer-spin-button, .day-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .day-input:focus { border-color: var(--accent) !important; }
   .custom-date-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
-  .custom-date-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.5rem 0.75rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; outline: none; transition: border-color 0.2s; }
+  .custom-date-row input[type=text] { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.5rem 0.75rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; outline: none; transition: border-color 0.2s; }
+  .custom-date-row input[type=text]:focus { border-color: var(--accent); }
   .custom-date-row input:focus { border-color: var(--accent); }
   .btn-remove-custom { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0 0.25rem; transition: color 0.2s; }
   .btn-remove-custom:hover { color: var(--danger); }
@@ -373,8 +379,8 @@ window.dispatchEvent(new Event('firebase-ready'));
     <div class="dates-group">
       <label>Standard Dates</label>
       <div class="date-inputs">
-        <div class="date-input-row"><span>🎂 Birthday</span><input type="date" id="d-birthday"></div>
-        <div class="date-input-row"><span>💍 Anniversary</span><input type="date" id="d-anniversary"></div>
+        <div class="date-input-row"><span>🎂 Birthday</span><select id="d-birthday-m" class="month-select"><option value="">Month</option></select><input type="number" id="d-birthday-d" class="day-input" min="1" max="31" placeholder="Day"></div>
+        <div class="date-input-row"><span>💍 Anniversary</span><select id="d-anniversary-m" class="month-select"><option value="">Month</option></select><input type="number" id="d-anniversary-d" class="day-input" min="1" max="31" placeholder="Day"></div>
       </div>
     </div>
     <div class="dates-group">
@@ -571,19 +577,26 @@ function daysUntilFixed(month, day) {
   return Math.round((nextFixed(month, day) - tod()) / 86400000);
 }
 
+function parseMD(dateStr) {
+  // Handles both "MM-DD" and legacy "YYYY-MM-DD"
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length === 3) return { m: parts[1], d: parts[2] };
+  return { m: parts[0], d: parts[1] };
+}
+
 function daysUntil(dateStr) {
   const t = tod();
-  const [y,m,d] = dateStr.split('-').map(Number);
-  let dt = new Date(y, m - 1, d);
-  if (dt < t) dt = new Date(y + 1, m - 1, d);
+  const { m, d } = parseMD(dateStr);
+  let dt = new Date(t.getFullYear(), m - 1, d);
+  if (dt < t) dt = new Date(t.getFullYear() + 1, m - 1, d);
   return Math.round((dt - t) / 86400000);
 }
 
 function sc(days) { return days <= 3 ? 'urgent' : days <= 7 ? 'soon' : 'ok'; }
 
 function fmtDate(dateStr) {
-  const [,m,d] = dateStr.split('-');
-  return new Date(2000, m-1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const { m, d } = parseMD(dateStr);
+  return new Date(2000, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -847,6 +860,11 @@ function render() { renderGlobal(); renderPeople(); renderAlerts(); }
 // ═══════════════════════════════════════════════════════════════
 // ADD WIFE
 // ═══════════════════════════════════════════════════════════════
+function monthOptions() {
+  const months = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  return months.map((n, i) => i === 0 ? '<option value="">Month</option>' : `<option value="${String(i).padStart(2,'0')}">${n}</option>`).join('');
+}
+
 function addCustomDateField() {
   const area = document.getElementById('custom-date-area');
   const id = customCount++;
@@ -855,22 +873,30 @@ function addCustomDateField() {
   row.id = 'cr-' + id;
   row.innerHTML = `
     <input type="text" placeholder="Label (e.g. First Date)" id="cl-${id}">
-    <input type="date" id="cd-${id}">
+    <select id="cm-${id}" class="month-select">${monthOptions()}</select>
+    <input type="number" id="cd-${id}" class="day-input" min="1" max="31" placeholder="Day">
     <button class="btn-remove-custom" onclick="document.getElementById('cr-${id}').remove()">✕</button>`;
   area.appendChild(row);
+}
+
+function getMD(mId, dId) {
+  const m = document.getElementById(mId)?.value;
+  const d = document.getElementById(dId)?.value;
+  if (m && d) return m + '-' + String(d).padStart(2, '0');
+  return '';
 }
 
 async function addPerson() {
   const name  = document.getElementById('wife-name').value.trim();
   const owner = document.getElementById('owner-name').value.trim();
   if (!name || !owner) { alert('Enter both names.'); return; }
-  const birthday    = document.getElementById('d-birthday').value;
-  const anniversary = document.getElementById('d-anniversary').value;
+  const birthday    = getMD('d-birthday-m', 'd-birthday-d');
+  const anniversary = getMD('d-anniversary-m', 'd-anniversary-d');
   const custom = [];
   document.querySelectorAll('.custom-date-row').forEach(row => {
     const id = row.id.replace('cr-', '');
     const label = document.getElementById('cl-'+id)?.value.trim();
-    const date  = document.getElementById('cd-'+id)?.value;
+    const date  = getMD('cm-'+id, 'cd-'+id);
     if (label && date) custom.push({ label, date });
   });
   try {
@@ -878,8 +904,10 @@ async function addPerson() {
     await addDoc(collection(window._db, 'wives'), { name, owner, birthday, anniversary, custom });
     document.getElementById('wife-name').value = '';
     document.getElementById('owner-name').value = '';
-    document.getElementById('d-birthday').value = '';
-    document.getElementById('d-anniversary').value = '';
+    document.getElementById('d-birthday-m').value = '';
+    document.getElementById('d-birthday-d').value = '';
+    document.getElementById('d-anniversary-m').value = '';
+    document.getElementById('d-anniversary-d').value = '';
     document.getElementById('custom-date-area').innerHTML = '';
   } catch (e) {
     console.error('Add person error:', e);
@@ -901,6 +929,8 @@ async function removePerson(i) {
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
+// Populate month selects in the static HTML form
+document.querySelectorAll('.month-select').forEach(sel => { sel.innerHTML = monthOptions(); });
 render(); // initial empty render
 
 function startFirestore() {

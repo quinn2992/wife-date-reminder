@@ -34,8 +34,11 @@ function daysUntilFixed(month, day) {
 }
 
 function daysUntil(dateStr) {
+  // Handles both "MM-DD" (new) and "YYYY-MM-DD" (legacy) formats
   const t = todayMidnight();
-  const [, m, d] = dateStr.split('-').map(Number);
+  const parts = dateStr.split('-').map(Number);
+  const m = parts.length === 3 ? parts[1] : parts[0];
+  const d = parts.length === 3 ? parts[2] : parts[1];
   let dt = new Date(t.getFullYear(), m - 1, d);
   if (dt < t) dt = new Date(t.getFullYear() + 1, m - 1, d);
   return Math.round((dt - t) / 86400000);
