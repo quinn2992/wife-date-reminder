@@ -429,6 +429,11 @@ window.dispatchEvent(new Event('firebase-ready'));
           <small>EmailJS → Account → API Keys</small>
         </div>
         <div class="ef">
+          <label>EmailJS Private Key (for server-side cron)</label>
+          <input type="text" id="ej-privkey" placeholder="your_private_key">
+          <small>EmailJS → Account → API Keys → Private Key</small>
+        </div>
+        <div class="ef">
           <label>From Name (sender label)</label>
           <input type="text" id="ej-sender" placeholder="e.g. The Crew Bot">
         </div>
@@ -638,6 +643,7 @@ async function saveAdminConfig() {
   emailCfg.serviceId  = document.getElementById('ej-service').value.trim();
   emailCfg.templateId = document.getElementById('ej-template').value.trim();
   emailCfg.pubKey     = document.getElementById('ej-pubkey').value.trim();
+  emailCfg.privateKey = document.getElementById('ej-privkey').value.trim();
   emailCfg.sender     = document.getElementById('ej-sender').value.trim();
   emailCfg.autoSend   = document.getElementById('auto-send').checked;
   try {
@@ -655,6 +661,7 @@ function loadAdminConfig() {
   if (emailCfg.serviceId)  document.getElementById('ej-service').value  = emailCfg.serviceId;
   if (emailCfg.templateId) document.getElementById('ej-template').value = emailCfg.templateId;
   if (emailCfg.pubKey)     document.getElementById('ej-pubkey').value   = emailCfg.pubKey;
+  if (emailCfg.privateKey) document.getElementById('ej-privkey').value  = emailCfg.privateKey;
   if (emailCfg.sender)     document.getElementById('ej-sender').value   = emailCfg.sender;
   document.getElementById('auto-send').checked = !!emailCfg.autoSend;
   updateBadge();

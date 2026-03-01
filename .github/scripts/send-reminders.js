@@ -83,6 +83,7 @@ async function sendEmailViaREST(toEmail, eventListText, cfg) {
       service_id:  cfg.serviceId,
       template_id: cfg.templateId,
       user_id:     cfg.pubKey,
+      accessToken: cfg.privateKey,
       template_params: {
         to_email:   toEmail,
         from_name:  cfg.sender || 'Date Reminder',
@@ -108,8 +109,8 @@ async function main() {
     return;
   }
   const cfg = cfgSnap.data();
-  if (!cfg.serviceId || !cfg.templateId || !cfg.pubKey) {
-    console.log('  Email config incomplete (missing serviceId/templateId/pubKey). Exiting.');
+  if (!cfg.serviceId || !cfg.templateId || !cfg.pubKey || !cfg.privateKey) {
+    console.log('  Email config incomplete (missing serviceId/templateId/pubKey/privateKey). Exiting.');
     return;
   }
 
