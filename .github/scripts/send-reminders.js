@@ -1,6 +1,6 @@
 // send-reminders.js — GitHub Actions cron job
-// Reads Firestore for wives/subscribers/config, checks for dates within
-// 7 days, sends reminder emails via EmailJS REST API.
+// Reads Firestore for wives/subscribers/config, sends reminder emails via
+// EmailJS REST API when an event is exactly 7 days away or exactly 1 day away.
 
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -45,13 +45,16 @@ function daysUntil(dateStr) {
 }
 
 // ── Build alerts for a specific subscriber ──
-function buildAlertsForSubscriber(people, subscriberEmail, maxDays = 7) {
+// Only fires on the two reminder days: exactly 7 days out and exactly 1 day out.
+const REMINDER_DAYS = [7, 1];
+
+function buildAlertsForSubscriber(people, subscriberEmail) {
   const alerts = [];
 
   // Global holidays go to everyone
   for (const g of GLOBAL_DATES) {
     const d = daysUntilFixed(g.month, g.day);
-    if (d <= maxDays) alerts.push({ label: g.name, days: d });
+    if (REMINDER_DAYS.includes(d)) alerts.push({ label: g.name, days: d });
   }
 
   // Wife-specific dates only go to the husband who added her
@@ -66,7 +69,7 @@ function buildAlertsForSubscriber(people, subscriberEmail, maxDays = 7) {
     }
     for (const dt of all) {
       const d = daysUntil(dt.val);
-      if (d <= maxDays) alerts.push({ label: dt.label, days: d });
+      if (REMINDER_DAYS.includes(d)) alerts.push({ label: dt.label, days: d });
     }
   }
 
@@ -141,7 +144,7 @@ async function main() {
   // Send per-subscriber targeted emails
   let ok = 0, fail = 0, skipped = 0;
   for (const sub of subscribers) {
-    const alerts = buildAlertsForSubscriber(people, sub.email, 7);
+    const alerts = buildAlertsForSubscriber(people, sub.email);
     if (alerts.length === 0) {
       console.log(`  ${sub.name}: no upcoming dates, skipping`);
       skipped++;
