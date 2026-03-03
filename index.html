@@ -453,11 +453,6 @@ window.dispatchEvent(new Event('firebase-ready'));
         </div>
       </div>
 
-      <div class="check-row">
-        <input type="checkbox" id="auto-send">
-        <label for="auto-send">Auto-send reminder emails when page opens (max once per day, only if dates ≤7 days)</label>
-      </div>
-
       <div class="admin-actions">
         <button class="btn-admin-save" onclick="saveAdminConfig()">💾 Save Settings</button>
         <button class="btn-admin-outline" onclick="sendTestEmail()">✉ Send Test Email</button>
@@ -516,7 +511,7 @@ function initFirestore() {
   let wivesLoaded = false, subsLoaded = false, cfgLoaded = false;
 
   function tryAutoSend() {
-    if (wivesLoaded && subsLoaded && cfgLoaded) checkAutoSend();
+    if (wivesLoaded && subsLoaded && cfgLoaded) { /* auto-send disabled */ }
   }
 
   onSnapshot(collection(db, 'wives'), (snapshot) => {
@@ -804,15 +799,6 @@ function sendTestEmail() {
 
 function sendNowEmail() { sendEmails(buildAlerts(7)); }
 
-function checkAutoSend() {
-  if (!emailCfg.autoSend) return;
-  const alerts = buildAlerts(7);
-  if (!alerts.length) return;
-  const todayStr = new Date().toDateString();
-  if (localStorage.getItem('lastEmailDate') === todayStr) return;
-  localStorage.setItem('lastEmailDate', todayStr);
-  sendEmails(alerts);
-}
 
 // ═══════════════════════════════════════════════════════════════
 // RENDER
