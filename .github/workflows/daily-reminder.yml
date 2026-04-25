@@ -29,3 +29,10 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           EMAILJS_PRIVATE_KEY: ${{ secrets.EMAILJS_PRIVATE_KEY }}
         run: node send-reminders.js
+
+      # Prevent GitHub from disabling this scheduled workflow after 60 days
+      # of repo inactivity by making a lightweight keepalive commit.
+      - name: Keepalive
+        uses: gautamkrishnar/keepalive-workflow@v2
+        with:
+          time_elapsed: 50
